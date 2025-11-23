@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Card Calculator - Track Your Hours</title>
+    <meta name="description" content="Calculate how far ahead or behind you are for reaching 40 hours per week. Track your time card hours with precision and real-time updates.">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: 210 100% 45%;
+            --primary-foreground: 210 100% 98%;
+            --destructive: 0 84% 40%;
+            --destructive-foreground: 0 84% 98%;
+            --background: 0 0% 100%;
+            --foreground: 0 0% 9%;
+            --muted-foreground: 210 8% 35%;
+            --card: 0 0% 98%;
+            --card-foreground: 0 0% 9%;
+            --accent: 210 12% 93%;
+            --accent-foreground: 210 12% 15%;
+            --border: 0 0% 89%;
+        }
+
+        .dark {
+            --background: 0 0% 7%;
+            --foreground: 0 0% 98%;
+            --muted-foreground: 210 8% 72%;
+            --card: 0 0% 9%;
+            --card-foreground: 0 0% 98%;
+            --accent: 210 12% 15%;
+            --accent-foreground: 210 12% 92%;
+            --border: 0 0% 16%;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.6;
+        }
+
+        .header {
+            border-bottom: 1px solid hsl(var(--border));
+            background-color: hsl(var(--card));
+            padding: 1.5rem 1rem;
+        }
+
+        .header-content {
+            max-width: 42rem;
+            margin: 0 auto;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .container {
+            max-width: 42rem;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .card {
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: hsl(var(--foreground));
+        }
+
+        input[type="number"],
+        input[type="time"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            transition: border-color 0.3s;
+        }
+
+        input[type="number"]:focus,
+        input[type="time"]:focus {
+            outline: none;
+            border-color: hsl(var(--primary));
+            box-shadow: 0 0 0 3px hsla(var(--primary), 0.1);
+        }
+
+        .helper-text {
+            font-size: 0.75rem;
+            color: hsl(var(--muted-foreground));
+            margin-top: 0.25rem;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+        }
+
+        input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem 1.25rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-card {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-value {
+            font-size: 2.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-ahead {
+            color: hsl(var(--primary));
+        }
+
+        .status-behind {
+            color: hsl(var(--destructive));
+        }
+
+        .status-label {
+            font-size: 1rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .metric-card {
+            background-color: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+            text-align: center;
+        }
+
+        .metric-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            justify-content: center;
+            font-size: 0.875rem;
+            color: hsl(var(--muted-foreground));
+            margin-bottom: 0.75rem;
+        }
+
+        .metric-value {
+            font-size: 1.875rem;
+            font-weight: 500;
+            color: hsl(var(--foreground));
+        }
+
+        .clock-out-card {
+            background-color: hsl(var(--accent));
+            border: 1px solid hsl(var(--accent));
+            padding: 1.5rem;
+            border-radius: 0.375rem;
+        }
+
+        .clock-out-label {
+            font-size: 0.875rem;
+            color: hsl(var(--accent-foreground));
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .clock-out-time {
+            font-size: 1.875rem;
+            font-weight: 500;
+            color: hsl(var(--accent-foreground));
+        }
+
+        .clock-out-note {
+            font-size: 0.875rem;
+            color: hsla(var(--accent-foreground), 0.8);
+            margin-top: 0.5rem;
+        }
+
+        .results-section {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                <span>⏱️</span>
+                Time Card Calculator
+            </h1>
+            <p id="weekInfo">Week of Nov 18 - Nov 24, 2025</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <h2>Enter Time Card Information</h2>
+            <div>
+                <div class="form-group">
+                    <label for="currentHours">Current Time Card Hours</label>
+                    <input
+                        type="number"
+                        id="currentHours"
+                        data-testid="input-current-hours"
+                        step="0.01"
+                        placeholder="0.00"
+                        required
+                        autofocus
+                    />
+                    <p class="helper-text">Enter hours with two decimal places (e.g., 32.50)</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="lastPunchIn">Last Punch In Time <span style="color: hsl(var(--muted-foreground))">(Optional)</span></label>
+                    <input
+                        type="time"
+                        id="lastPunchIn"
+                        data-testid="input-last-punch-in"
+                    />
+                    <p class="helper-text">For real-time projection if still clocked in</p>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input
+                            type="checkbox"
+                            id="lunchTaken"
+                            data-testid="checkbox-lunch-taken"
+                            checked
+                        />
+                        <label for="lunchTaken">I have already taken my lunch break</label>
+                    </div>
+                </div>
+
+                <button type="button" class="btn-primary" id="calculateBtn" data-testid="button-calculate">
+                    <span>🔢</span>
+                    Calculate Status
+                </button>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="results-section hidden">
+            <div class="card status-card">
+                <div class="status-icon" id="statusIcon">📈</div>
+                <div class="status-value" id="statusValue" data-testid="text-status-time">+0h 0m</div>
+                <div class="status-label" id="statusLabel" data-testid="text-status-label">ahead of schedule</div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <span>⏰</span>
+                        Current Hours
+                    </div>
+                    <div class="metric-value" id="currentHoursDisplay" data-testid="text-current-hours">0.00</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <span>📅</span>
+                        Expected Hours
+                    </div>
+                    <div class="metric-value" id="expectedHoursDisplay" data-testid="text-expected-hours">0</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-label">
+                        <span>🎯</span>
+                        Hours to 40
+                    </div>
+                    <div class="metric-value" id="hoursRemainingDisplay" data-testid="text-hours-remaining">40h 0m</div>
+                </div>
+            </div>
+
+            <div id="clockOutSection" class="hidden">
+                <div class="clock-out-card">
+                    <div class="clock-out-label">Target Clock Out Time</div>
+                    <div class="clock-out-time" id="clockOutTime" data-testid="text-clock-out-time">5:00 PM</div>
+                    <div class="clock-out-note">to reach exactly 40 hours</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function(){
+  const doc = document;
+  const log = console.log;
+  const errLog = console.error;
+
+  function update_week_info(){
+    log("update_week_info: start");
+    const now = new Date();
+    // compute Monday-start week
+    const day = now.getDay(); // 0=Sun .. 6=Sat
+    const diffToMon = (day + 6) % 7; // days since Monday
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMon);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    const startStr = monday.toLocaleString(undefined, { month: 'short', day: '2-digit' });
+    const endStr = sunday.toLocaleString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
+    log(`update_week_info: week ${startStr} - ${endStr}`);
+    const el = doc.getElementById('weekInfo');
+    if (el) el.textContent = `Week of ${startStr} - ${endStr}`;
+    log("update_week_info: done");
+  }
+
+  function calculate_status(current_hours, last_punch_in, lunch_taken){
+    log("calculate_status: start", { current_hours, last_punch_in, lunch_taken });
+    const now = new Date();
+    const jsDay = now.getDay(); // 0=Sun .. 6=Sat
+    const weekdays_passed = Math.max(0, Math.min(jsDay, 5));
+    const expected_hours = weekdays_passed * 8;
+
+    let hours_to_use = current_hours;
+    let clockOutTime = null;
+
+    if (last_punch_in){
+      log("calculate_status: computing live worked time from last_punch_in", last_punch_in);
+      const [hStr, mStr] = last_punch_in.split(':');
+      const h = parseInt(hStr, 10);
+      const m = parseInt(mStr || '0', 10);
+      let punchIn = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0, 0);
+      if (punchIn > now){
+        // assume overnight shift started previous day
+        punchIn = new Date(punchIn.getFullYear(), punchIn.getMonth(), punchIn.getDate() - 1, punchIn.getHours(), punchIn.getMinutes());
+        log("calculate_status: adjusted punch_in_time for overnight shift");
+      }
+      const minutes_worked = (now - punchIn) / 60000;
+      const hours_worked = minutes_worked / 60;
+      log(`calculate_status: hours_worked=${hours_worked.toFixed(2)}`);
+
+      let adjusted_hours = hours_worked;
+      if (!lunch_taken && hours_worked > 4){
+        adjusted_hours = hours_worked - 1;
+        log("calculate_status: lunch not taken, subtract 1 hour");
+      }
+
+      hours_to_use = current_hours + adjusted_hours;
+      log(`calculate_status: hours_to_use after live adjustment=${hours_to_use.toFixed(2)}`);
+
+      const work_hours_needed_today = 40 - current_hours;
+      const lunch_hours_to_add = !lunch_taken ? 1 : 0;
+      const total_calendar_hours = work_hours_needed_today + lunch_hours_to_add;
+
+      const clockOutDate = new Date(punchIn.getTime() + total_calendar_hours * 3600 * 1000);
+      let hour = clockOutDate.getHours();
+      const minute = clockOutDate.getMinutes();
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+      clockOutTime = `${displayHour}:${String(minute).padStart(2,'0')} ${ampm}`;
+      log(`calculate_status: computed clock_out_time=${clockOutTime}`);
+    }
+
+    const total_minutes_ahead_behind = (hours_to_use - expected_hours) * 60;
+    const hours_ahead_behind = Math.floor(Math.abs(total_minutes_ahead_behind) / 60);
+    const minutes_ahead_behind = Math.round(Math.abs(total_minutes_ahead_behind) % 60);
+    const is_ahead = total_minutes_ahead_behind >= 0;
+    const hours_remaining = Math.max(0, 40 - hours_to_use);
+
+    const result = {
+      hoursAheadBehind: hours_ahead_behind,
+      minutesAheadBehind: minutes_ahead_behind,
+      currentHours: hours_to_use,
+      expectedHours: expected_hours,
+      hoursRemaining: hours_remaining,
+      isAhead: is_ahead,
+      clockOutTime: clockOutTime
+    };
+    log("calculate_status: result", result);
+    return result;
+  }
+
+  function showInputError(msg){
+    let err = doc.getElementById('inputError');
+    if (!err){
+      err = doc.createElement('p');
+      err.id = 'inputError';
+      err.className = 'helper-text';
+      const parent = doc.getElementById('currentHours').parentElement;
+      parent.appendChild(err);
+    }
+    err.textContent = msg;
+  }
+
+  function clearInputError(){
+    const err = doc.getElementById('inputError');
+    if (err) err.remove();
+  }
+
+  function handle_calculate(){
+    try{
+      log("handle_calculate: invoked");
+      const currentHoursInput = doc.getElementById('currentHours').value;
+      const lastPunchIn = doc.getElementById('lastPunchIn').value;
+      const lunchTaken = doc.getElementById('lunchTaken').checked;
+      log("handle_calculate: inputs", { currentHoursInput, lastPunchIn, lunchTaken });
+
+      let current_hours = 0.0;
+      if (!currentHoursInput){
+        current_hours = 0.0;
+        log("handle_calculate: current_hours empty, defaulting to 0.0");
+      } else {
+        const parsed = parseFloat(currentHoursInput);
+        if (Number.isNaN(parsed)){
+          log("handle_calculate: Invalid hours input");
+          showInputError('Please enter a valid number (e.g. 32.50)');
+          return;
+        }
+        current_hours = parsed;
+        clearInputError();
+      }
+
+      const result = calculate_status(current_hours, lastPunchIn, lunchTaken);
+      log("handle_calculate: received result from calculate_status", result);
+
+      // Update UI
+      const status_icon = doc.getElementById('statusIcon');
+      const status_value = doc.getElementById('statusValue');
+      const status_label = doc.getElementById('statusLabel');
+
+      if (result.isAhead){
+        status_icon.textContent = '📈';
+        status_value.className = 'status-value status-ahead';
+        status_label.textContent = 'ahead of schedule';
+      } else {
+        status_icon.textContent = '📉';
+        status_value.className = 'status-value status-behind';
+        status_label.textContent = 'behind schedule';
+      }
+
+      const sign = result.isAhead ? '+' : '-';
+      status_value.textContent = `${sign}${result.hoursAheadBehind}h ${result.minutesAheadBehind}m`;
+
+      const currentHoursDisplay = doc.getElementById('currentHoursDisplay');
+      const expectedHoursDisplay = doc.getElementById('expectedHoursDisplay');
+      const hoursRemainingDisplay = doc.getElementById('hoursRemainingDisplay');
+
+      if (currentHoursDisplay) currentHoursDisplay.textContent = result.currentHours.toFixed(2);
+      if (expectedHoursDisplay) expectedHoursDisplay.textContent = String(result.expectedHours);
+
+      const remaining_hours = Math.floor(result.hoursRemaining);
+      const remaining_minutes = Math.round((result.hoursRemaining - remaining_hours) * 60);
+      if (hoursRemainingDisplay) hoursRemainingDisplay.textContent = `${remaining_hours}h ${remaining_minutes}m`;
+
+      const resultsSection = doc.getElementById('resultsSection');
+      if (resultsSection) resultsSection.classList.remove('hidden');
+
+      if (result.clockOutTime){
+        const clockOutTimeEl = doc.getElementById('clockOutTime');
+        if (clockOutTimeEl) clockOutTimeEl.textContent = result.clockOutTime;
+        const clockOutSection = doc.getElementById('clockOutSection');
+        if (clockOutSection) clockOutSection.classList.remove('hidden');
+      } else {
+        const clockOutSection = doc.getElementById('clockOutSection');
+        if (clockOutSection) clockOutSection.classList.add('hidden');
+      }
+
+      log("handle_calculate: UI updated, showing resultsSection");
+      resultsSection && resultsSection.scrollIntoView({ behavior: 'smooth' });
+    }catch(e){
+      errLog("handle_calculate: error", e);
+    }
+  }
+
+  // wire up button
+  const btn = doc.getElementById('calculateBtn');
+  if (btn){
+    btn.addEventListener('click', handle_calculate);
+    log("UI: calculateBtn listener attached");
+  } else {
+    log("UI: calculateBtn not found");
+  }
+
+  // init
+  log("ui init: calling update_week_info()");
+  update_week_info();
+})();
+</script>
