@@ -332,7 +332,7 @@
                             data-testid="checkbox-lunch-taken"
                             checked
                         />
-                        <label for="lunchTaken">I have already taken my lunch break</label>
+                        <label for="lunchTaken">I have already taken my lunch break or working through lunch</label>
                     </div>
                 </div>
 
@@ -455,7 +455,10 @@
       log(`calculate_status: computed clock_out_time=${clockOutTime}`);
     }
 
-    const total_minutes_ahead_behind = (hours_to_use - expected_hours) * 60;
+    // Minutes until 5:00 PM local time (today). If past 5 PM, returns 0.
+    const fivePmToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0, 0);
+    const minutesUntilFive = Math.max(0, Math.floor((fivePmToday - now) / 60000) + (lunch_taken ? 0 : 60));
+    const total_minutes_ahead_behind = (hours_to_use - expected_hours) * 60 + minutesUntilFive;
     const hours_ahead_behind = Math.floor(Math.abs(total_minutes_ahead_behind) / 60);
     const minutes_ahead_behind = Math.round(Math.abs(total_minutes_ahead_behind) % 60);
     const is_ahead = total_minutes_ahead_behind >= 0;
