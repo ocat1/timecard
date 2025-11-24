@@ -3,7 +3,7 @@ import http.server
 import socketserver
 import os
 
-os.chdir(os.path.join(os.path.dirname(__file__), 'static'))
+os.chdir(os.path.dirname(__file__))
 
 PORT = 5000
 Handler = http.server.SimpleHTTPRequestHandler

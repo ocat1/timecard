@@ -370,7 +370,7 @@
                 <div class="metric-card">
                     <div class="metric-label">
                         <span>🎯</span>
-                        Hours to 40
+                        Hours to EOD
                     </div>
                     <div class="metric-value" id="hoursRemainingDisplay" data-testid="text-hours-remaining">40h 0m</div>
                 </div>
@@ -442,7 +442,7 @@
       hours_to_use = current_hours + adjusted_hours;
       log(`calculate_status: hours_to_use after live adjustment=${hours_to_use.toFixed(2)}`);
 
-      const work_hours_needed_today = 40 - current_hours;
+      const work_hours_needed_today = expected_hours - current_hours;
       const lunch_hours_to_add = !lunch_taken ? 1 : 0;
       const total_calendar_hours = work_hours_needed_today + lunch_hours_to_add;
 
@@ -459,7 +459,7 @@
     const hours_ahead_behind = Math.floor(Math.abs(total_minutes_ahead_behind) / 60);
     const minutes_ahead_behind = Math.round(Math.abs(total_minutes_ahead_behind) % 60);
     const is_ahead = total_minutes_ahead_behind >= 0;
-    const hours_remaining = Math.max(0, 40 - hours_to_use);
+    const hours_remaining = Math.max(0, expected_hours - hours_to_use);
 
     const result = {
       hoursAheadBehind: hours_ahead_behind,
