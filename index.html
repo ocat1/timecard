@@ -342,26 +342,69 @@
                         Advanced Options ▼
                     </button>
                     <div id="advancedOptions" class="card hidden" style="margin-bottom:1rem;">
+                        <!-- Advanced Options: PTO and OOO per weekday (hours, one decimal place) -->
                         <div class="form-group">
-                            <label>Deviation (overtime/undertime)</label>
-                            <div style="display: flex; gap: 0.5rem;">
-                                <input type="number" id="deviationHours" step="1" min="-12" max="12" value="0" style="width:5rem;" />
-                                <span>h</span>
-                                <input type="number" id="deviationMinutes" step="1" min="-59" max="59" value="0" style="width:5rem;" />
-                                <span>m</span>
+                            <label>PTO Per Day (hours)</label>
+                            <div id="ptoInputs" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <div>
+                                    <label>Mon</label>
+                                    <input type="number" id="ptoMon" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Tue</label>
+                                    <input type="number" id="ptoTue" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Wed</label>
+                                    <input type="number" id="ptoWed" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Thu</label>
+                                    <input type="number" id="ptoThu" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Fri</label>
+                                    <input type="number" id="ptoFri" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
                             </div>
-                            <p class="helper-text">Add/subtract hours and minutes from your calculation (e.g., 1h 15m for overtime)</p>
+                            <p class="helper-text">Enter PTO hours for each day (e.g., 4.5 for half day off).</p>
                         </div>
                         <div class="form-group">
-                            <label>Days Off (check all that apply)</label>
-                            <div id="daysOffCheckboxes" style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                                <label><input type="checkbox" value="1" /> Mon</label>
-                                <label><input type="checkbox" value="2" /> Tue</label>
-                                <label><input type="checkbox" value="3" /> Wed</label>
-                                <label><input type="checkbox" value="4" /> Thu</label>
-                                <label><input type="checkbox" value="5" /> Fri</label>
+                            <label>OOO Per Day (hours)</label>
+                            <div id="oooInputs" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <div>
+                                    <label>Mon</label>
+                                    <input type="number" id="oooMon" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Tue</label>
+                                    <input type="number" id="oooTue" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Wed</label>
+                                    <input type="number" id="oooWed" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Thu</label>
+                                    <input type="number" id="oooThu" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
+                                <div>
+                                    <label>Fri</label>
+                                    <input type="number" id="oooFri" min="0" max="8" step="0.1" value="0" style="width:4rem;" />
+                                </div>
                             </div>
-                            <p class="helper-text">Check any weekdays you have off this week</p>
+                            <p class="helper-text">Enter OOO hours for each day (e.g., 2 for two hours out-of-office).</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Make Up OOO On These Days</label>
+                            <div id="oooMakeupDays" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                <label><input type="checkbox" value="1" checked /> Mon</label>
+                                <label><input type="checkbox" value="2" checked /> Tue</label>
+                                <label><input type="checkbox" value="3" checked /> Wed</label>
+                                <label><input type="checkbox" value="4" checked /> Thu</label>
+                                <label><input type="checkbox" value="5" checked /> Fri</label>
+                            </div>
+                            <p class="helper-text">Check which days you plan to make up OOO hours. Uncheck days you will not use for make-up.</p>
                         </div>
                     </div>
                 </div>
@@ -413,6 +456,14 @@
                     <div class="clock-out-note">to reach exactly 40 hours</div>
                 </div>
             </div>
+
+            <div id="clockInTomorrowSection" class="hidden">
+                <div class="clock-out-card">
+                    <div class="clock-out-label">Target Clock In Time Tomorrow</div>
+                    <div class="clock-out-time" id="clockInTomorrowDisplay"></div>
+                    <div class="clock-out-note">to leave at 5:00 PM and stay on schedule</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -438,20 +489,39 @@
     log("update_week_info: done");
   }
 
-  function calculate_status(current_hours, last_punch_in, lunch_taken, deviationMinutes = 0, daysOff = []) {
-    log("calculate_status: start", { current_hours, last_punch_in, lunch_taken, deviationMinutes, daysOff });
+  function calculate_status(current_hours, last_punch_in, lunch_taken, pto = [0,0,0,0,0,0], ooo = [0,0,0,0,0,0], daysOff = [], oooMakeupDays = [1,2,3,4,5]) {
     const now = new Date();
     const jsDay = now.getDay(); // 0=Sun .. 6=Sat
-    // Weekdays passed (Mon=1, Fri=5)
     let weekdays_passed = Math.max(0, Math.min(jsDay, 5));
-    // Subtract days off from expected hours
-    const daysOffCount = daysOff.filter(d => d >= 1 && d <= 5 && d <= weekdays_passed).length;
-    const expected_hours = (weekdays_passed - daysOffCount) * 8;
+
+    // Calculate expected hours so far this week
+    let expected_hours_in_real_time = 0;
+    for (let d = 1; d <= weekdays_passed; d++) {
+        if (!daysOff.includes(d)) {
+            expected_hours_in_real_time += Math.max(0, 8 - pto[d] + ooo[d]);
+        }
+    }
+
+    // Calculate total OOO hours to make up
+    let totalOooToMakeUp = 0;
+    for (let d = 1; d <= 5; d++) {
+        totalOooToMakeUp += ooo[d] || 0;
+    }
+    // Only distribute among checked make-up days
+    const makeupDaysCount = oooMakeupDays.length;
+    const oooPerDay = makeupDaysCount > 0 ? totalOooToMakeUp / makeupDaysCount : 0;
+    // Add OOO make-up for each selected day (if in current/past days)
+    for (let d = 1; d <= weekdays_passed; d++) {
+        if (oooMakeupDays.includes(d) && !daysOff.includes(d)) {
+            expected_hours_in_real_time += oooPerDay;
+        }
+    }
 
     let hours_to_use = current_hours;
     let clockOutTime = null;
 
-    let work_hours_needed_today = expected_hours - current_hours;
+    // Calculate work hours needed today and clock out time
+    let work_hours_needed_today = expected_hours_in_real_time - current_hours;
     let total_calendar_hours = work_hours_needed_today + (lunch_taken ? 0 : 1);
     if (last_punch_in){
       log("calculate_status: computing live worked time from last_punch_in", last_punch_in);
@@ -471,7 +541,7 @@
       hours_to_use = current_hours + hours_worked;
       log(`calculate_status: hours_to_use after live adjustment=${hours_to_use.toFixed(2)}`);
 
-      work_hours_needed_today = expected_hours - current_hours;
+      work_hours_needed_today = expected_hours_in_real_time - current_hours;
       const lunch_hours_to_add = !lunch_taken ? 1 : 0;
       total_calendar_hours = work_hours_needed_today + lunch_hours_to_add;
 
@@ -483,42 +553,6 @@
       clockOutTime = `${displayHour}:${String(minute).padStart(2,'0')} ${ampm}`;
       log(`calculate_status: computed clock_out_time=${clockOutTime}`);
     }
-
-    // Calculate expected hours for today so far
-    const shiftStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0, 0);
-    const shiftEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0, 0, 0);
-    let expectedToday = 0;
-
-    // Check if today is a day off
-    const todayWeekday = jsDay; // 1=Mon, ..., 5=Fri
-    if (todayWeekday >= 1 && todayWeekday <= 5 && daysOff.includes(todayWeekday)) {
-        expectedToday = 0;
-    } else if (now < shiftStart) {
-        expectedToday = 0;
-    } else {
-        // Calculate worked time so far today
-        let worked = Math.min((now - shiftStart) / 3600000, 8); // up to 8 hours before 5pm
-        // If past noon and lunch not taken, subtract 1 hour
-        if (!lunch_taken && now.getHours() >= 12) {
-            worked = Math.max(0, worked - 1);
-        }
-        expectedToday = Math.min(worked, 8);
-    }
-
-    // Calculate total expected hours so far this week (excluding days off)
-    let expected_hours_in_real_time = 0;
-    for (let d = 1; d <= weekdays_passed; d++) {
-        if (!daysOff.includes(d)) {
-            // For today, use expectedToday; for previous days, use 8
-            expected_hours_in_real_time += (d === jsDay ? expectedToday : 8);
-        }
-    }
-
-    // Add deviation (overtime) split among remaining workdays
-    const totalWorkdays = 5 - daysOff.length;
-    const daysLeft = totalWorkdays - weekdays_passed + ((todayWeekday >= 1 && todayWeekday <= 5 && daysOff.includes(todayWeekday)) ? 0 : 1); // add one for today
-    const overtimePerDay = daysLeft > 0 ? deviationMinutes / 60 / daysLeft : 0;
-    expected_hours_in_real_time += overtimePerDay;
 
     const total_minutes_ahead_behind = (hours_to_use - expected_hours_in_real_time) * 60;
     const hours_ahead_behind = Math.floor(Math.abs(total_minutes_ahead_behind) / 60);
@@ -588,8 +622,30 @@
         clearInputError();
       }
 
+      // Read PTO and OOO for each weekday (hours, allowing decimals)
+      const pto = [0,0,0,0,0,0]; // 0=unused, 1=Mon, ..., 5=Fri
+      const ooo = [0,0,0,0,0,0];
+      pto[1] = parseFloat(doc.getElementById('ptoMon')?.value || "0");
+      pto[2] = parseFloat(doc.getElementById('ptoTue')?.value || "0");
+      pto[3] = parseFloat(doc.getElementById('ptoWed')?.value || "0");
+      pto[4] = parseFloat(doc.getElementById('ptoThu')?.value || "0");
+      pto[5] = parseFloat(doc.getElementById('ptoFri')?.value || "0");
+      ooo[1] = parseFloat(doc.getElementById('oooMon')?.value || "0");
+      ooo[2] = parseFloat(doc.getElementById('oooTue')?.value || "0");
+      ooo[3] = parseFloat(doc.getElementById('oooWed')?.value || "0");
+      ooo[4] = parseFloat(doc.getElementById('oooThu')?.value || "0");
+      ooo[5] = parseFloat(doc.getElementById('oooFri')?.value || "0");
+
+      // Read OOO make-up days
+      const oooMakeupDaysDiv = doc.getElementById('oooMakeupDays');
+      let oooMakeupDays = [];
+      if (oooMakeupDaysDiv) {
+        oooMakeupDays = Array.from(oooMakeupDaysDiv.querySelectorAll('input[type="checkbox"]:checked'))
+          .map(cb => parseInt(cb.value, 10));
+      }
+
       // Pass advanced options to calculation
-      const result = calculate_status(current_hours, lastPunchIn, lunchTaken, totalDeviationMinutes, daysOff);
+      const result = calculate_status(current_hours, lastPunchIn, lunchTaken, pto, ooo, daysOff, oooMakeupDays);
       log("handle_calculate: received result from calculate_status", result);
 
       // Update UI
@@ -636,6 +692,43 @@
       } else {
         const clockOutSection = doc.getElementById('clockOutSection');
         if (clockOutSection) clockOutSection.classList.add('hidden');
+      }
+
+      // Show clock-in time for tomorrow if no punch in time is entered
+      const clockInTomorrowDisplay = doc.getElementById('clockInTomorrowDisplay');
+      const clockInTomorrowSection = doc.getElementById('clockInTomorrowSection');
+      if (!lastPunchIn && clockInTomorrowDisplay && clockInTomorrowSection) {
+        // Calculate hours needed tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowWeekday = tomorrow.getDay(); // 1=Mon, ..., 5=Fri
+        let hoursNeededTomorrow = 8 - pto[tomorrowWeekday] + ooo[tomorrowWeekday];
+        // Add OOO make-up if tomorrow is a selected make-up day
+        if (oooMakeupDays.includes(tomorrowWeekday) && !daysOff.includes(tomorrowWeekday)) {
+          // Distribute remaining OOO make-up hours
+          let totalOooToMakeUp = 0;
+          for (let d = 1; d <= 5; d++) {
+            totalOooToMakeUp += ooo[d] || 0;
+          }
+          const makeupDaysCount = oooMakeupDays.length;
+          const oooPerDay = makeupDaysCount > 0 ? totalOooToMakeUp / makeupDaysCount : 0;
+          hoursNeededTomorrow += oooPerDay;
+        }
+        // Calculate clock-in time to leave at 5pm
+        let clockOutHour = 17;
+        let clockOutMinute = 0;
+        let clockInDate = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), clockOutHour, clockOutMinute, 0, 0);
+        clockInDate.setHours(clockOutHour - Math.floor(hoursNeededTomorrow));
+        clockInDate.setMinutes(clockOutMinute - Math.round((hoursNeededTomorrow - Math.floor(hoursNeededTomorrow)) * 60));
+        // Format time
+        let hour = clockInDate.getHours();
+        let minute = clockInDate.getMinutes();
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+        clockInTomorrowDisplay.textContent = `Clock in at ${displayHour}:${String(minute).padStart(2,'0')} ${ampm} to leave at 5:00 PM`;
+        clockInTomorrowSection.classList.remove('hidden');
+      } else if (clockInTomorrowSection) {
+        clockInTomorrowSection.classList.add('hidden');
       }
 
       log("handle_calculate: UI updated, showing resultsSection");
